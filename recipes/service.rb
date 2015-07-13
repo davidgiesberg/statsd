@@ -2,7 +2,6 @@
 # Cookbook Name:: statsd
 # Recipe:: default
 #
-# Copyright 2015, Michael Burns
 # Copyright 2011, Blank Pad Development
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,20 +17,24 @@
 # limitations under the License.
 #
 
-directory '/etc/statsd'
-
-if %w(debian rhel).include?(node['platform_family'])
-  include_recipe "statsd::#{node['platform_family']}"
+cookbook_file '/usr/share/statsd/scripts/start' do
+  source 'upstart.start'
+  mode 0755
 end
 
-include_recipe 'statsd::service'
-
-template '/etc/statsd/rdioConfig.js' do
+cookbook_file '/etc/init/statsd.conf' do
+  source 'upstart.conf'
   mode 0644
-  variables(
-    port: node['statsd']['port'],
-    graphitePort: node['statsd']['graphite_port'],
-    graphiteHost: node['statsd']['graphite_host']
-  )
-  notifies :restart, 'service[statsd]', :delayed
+end
+
+user node['statsd']['user'] do
+  comment 'statsd'
+  system true
+  shell '/bin/false'
+  home '/var/log/statsd'
+end
+
+service 'statsd' do
+  provider Chef::Provider::Service::Upstart
+  action [:enable, :start]
 end
